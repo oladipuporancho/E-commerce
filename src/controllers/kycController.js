@@ -1,4 +1,4 @@
-const Kyc = require("../models/Kyc");
+const Kyc = require("../models/kyc");
 const path = require("path");
 
 exports.submitBasicInfo = async (req, res) => {
