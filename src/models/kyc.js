@@ -15,7 +15,10 @@ const Kyc = sequelize.define("Kyc", {
   bankAccountNumber: { type: DataTypes.STRING, allowNull: true },
   bankName: { type: DataTypes.STRING, allowNull: true },
   workEmail: { type: DataTypes.STRING, allowNull: true },
-  status: { type: DataTypes.ENUM("pending", "approved", "rejected"), defaultValue: "pending" },
+  status: {
+    type: DataTypes.ENUM("pending", "approved", "rejected"),
+    defaultValue: "pending",
+  },
 });
 
 module.exports = Kyc;
