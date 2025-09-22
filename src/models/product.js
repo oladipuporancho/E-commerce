@@ -1,5 +1,5 @@
 const { DataTypes } = require("sequelize");
-const sequelize = require("../config/db");
+const sequelize = require("../config/db"); // adjust path if needed
 
 const Product = sequelize.define("Product", {
   name: {
@@ -7,19 +7,31 @@ const Product = sequelize.define("Product", {
     allowNull: false,
   },
   category: {
-    type: DataTypes.ENUM("phones", "wigs", "accessories", "electronics", "fashion", "beauty"),
+    type: DataTypes.STRING,
     allowNull: false,
   },
   price: {
     type: DataTypes.FLOAT,
     allowNull: false,
   },
-  description: {
-    type: DataTypes.TEXT,
-    allowNull: true,
-  },
-  imageUrl: {
+  image: {
     type: DataTypes.STRING,
+    allowNull: false,
+  },
+  rating: {
+    type: DataTypes.FLOAT,
+    defaultValue: 0,
+  },
+  reviewCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  inStock: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+  },
+  specs: {
+    type: DataTypes.JSONB, // PostgreSQL JSON column
     allowNull: true,
   },
 });

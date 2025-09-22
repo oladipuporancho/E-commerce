@@ -1,20 +1,14 @@
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
-const path = require("path");
 const productController = require("../controllers/productController");
 
-// Multer storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, "../uploads")),
-  filename: (req, file, cb) =>
-    cb(null, Date.now() + path.extname(file.originalname)),
-});
-const upload = multer({ storage });
+// Product routes
+router.post("/product", productController.createProduct);
+router.get("/product", productController.getProducts);
+router.get("/product/:id", productController.getProductById);
 
-// Routes
-router.post("/products", upload.single("image"), productController.createProduct);
-router.get("/products", productController.getAllProducts);
-router.get("/products/:category", productController.getProductsByCategory);
+// Category routes (updated to use /product/category/:category)
+router.get("/product/category/:category", productController.getProductsByCategory);
+router.get("/categories", productController.getAllCategories);
 
 module.exports = router;
