@@ -1,6 +1,6 @@
 const User = require("./User");
-const Kyc = require("./Kyc");
-const Otp = require("./Otp");
+const Kyc = require("./kyc");
+const Otp = require("./otp");
 
 // Associations
 User.hasOne(Kyc, { foreignKey: "userId", as: "kyc" });
