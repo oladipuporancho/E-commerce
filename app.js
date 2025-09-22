@@ -23,15 +23,15 @@ app.get("/", (req, res) => {
 // API Routes
 app.use("/auth", authRoutes);
 app.use("/kyc", kycRoutes);
-app.use("/api", productRoutes);
-app.use("/api/cart", cartRoutes);
+app.use("/api", productRoutes);   // Products
+app.use("/api/cart", cartRoutes); // Cart
 
 // Start server
 sequelize
   .sync()
   .then(() => {
     app.listen(PORT, () =>
-      console.log(` Server running on http://localhost:${PORT}`)
+      console.log(`🚀 Server running on http://localhost:${PORT}`)
     );
   })
   .catch((err) => console.error(" DB sync error:", err));

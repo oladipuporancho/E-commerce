@@ -3,12 +3,13 @@ const router = express.Router();
 const productController = require("../controllers/productController");
 
 // Product routes
-router.post("/product", productController.createProduct);
-router.get("/product", productController.getProducts);
-router.get("/product/:id", productController.getProductById);
+router.post("/products", productController.createProduct);         // Create
+router.get("/products", productController.getProducts);            // Get all
+router.get("/products/:id", productController.getProductById);     // Get one
+router.delete("/products/:id", productController.deleteProduct);   // Delete
 
-// Category routes (updated to use /product/category/:category)
-router.get("/product/category/:category", productController.getProductsByCategory);
+// Category routes
+router.get("/products/category/:category", productController.getProductsByCategory);
 router.get("/categories", productController.getAllCategories);
 
 module.exports = router;
