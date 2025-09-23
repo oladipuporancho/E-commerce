@@ -1,46 +1,33 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { User, kyc, otp } = require("../models");
+const { User, Kyc, Otp } = require("../models");
 const sendEmail = require("../utils/sendEmail");
 
-// -------------------------
-// Signup: generate OTP + email
-// -------------------------
 exports.signup = async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    // Check if already exists
     const existingUser = await User.findOne({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({ message: "This email is already registered." });
-    }
+    if (existingUser) return res.status(400).json({ message: "This email is already registered." });
 
-    // Remove old OTP
     await Otp.destroy({ where: { email } });
-
-    // Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Save OTP
-    await Otp.create({ email, code: otp, expiresAt, password: hashedPassword });
+    await Otp.create({ email, code: otpCode, expiresAt, password: hashedPassword });
 
-    // Email template
     const otpEmail = `
       <div style="font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9;">
         <h2 style="color:#4CAF50;">Welcome to Syca_Ecommerce!</h2>
         <p>Your OTP is:</p>
-        <h1 style="color:#333; letter-spacing: 3px;">${otp}</h1>
+        <h1 style="color:#333; letter-spacing: 3px;">${otpCode}</h1>
         <p>This OTP expires in 5 minutes.</p>
       </div>
     `;
-
     await sendEmail(email, "Verify your Syca_Ecommerce account", otpEmail, true);
 
     return res.json({
-      message: "Signup started. OTP sent to your email. Please verify to continue.",
+      message: "Signup started. OTP sent to your email. Please verify to continue."
     });
   } catch (error) {
     console.error("Signup error:", error);
@@ -48,19 +35,12 @@ exports.signup = async (req, res) => {
   }
 };
 
-// -------------------------
-// Verify OTP
-// -------------------------
 exports.verifyOtp = async (req, res) => {
   try {
     const { email, code } = req.body;
-
     const record = await Otp.findOne({ where: { email, code } });
     if (!record) return res.status(400).json({ message: "Invalid OTP." });
-
-    if (record.expiresAt < new Date()) {
-      return res.status(400).json({ message: "OTP has expired." });
-    }
+    if (record.expiresAt < new Date()) return res.status(400).json({ message: "OTP has expired." });
 
     record.verified = true;
     await record.save();
@@ -72,36 +52,43 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
-// -------------------------
-// Complete Signup
-// -------------------------
 exports.completeSignup = async (req, res) => {
   try {
     const { email, terms_accepted, privacy_accepted, credit_consent } = req.body;
-
     const record = await Otp.findOne({ where: { email } });
     if (!record) return res.status(404).json({ message: "No OTP record found for this email." });
     if (!record.verified) return res.status(400).json({ message: "Email not verified." });
 
-    // Create user
     const user = await User.create({
       email,
       password: record.password,
       isVerified: true,
       termsAccepted: terms_accepted,
       privacyAccepted: privacy_accepted,
-      creditConsent: credit_consent,
+      creditConsent: credit_consent
     });
 
-    // Clean OTP
     await record.destroy();
 
-    // JWT
-    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
+    const kyc = await Kyc.create({
+      userId: user.id,
+      fullName: "",
+      address: "",
+      dob: null,
+      bvn: null,
+      idNumber: null,
+      idDocumentUrl: null,
+      selfieUrl: null,
+      utilityBillUrl: null,
+      bankStatementUrl: null,
+      bankAccountNumber: null,
+      bankName: null,
+      workEmail: null,
+      status: "pending"
     });
 
-    // Send welcome email
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
     const welcomeEmail = `
       <div style="font-family: Arial, sans-serif; padding: 20px; background: #f1f1f1;">
         <h2>🎉 Signup Successful</h2>
@@ -110,16 +97,15 @@ exports.completeSignup = async (req, res) => {
     `;
     await sendEmail(email, "Welcome to Syca_Ecommerce!", welcomeEmail, true);
 
-    // Fetch user with KYC
     const fullUser = await User.findByPk(user.id, {
       attributes: { exclude: ["password"] },
-      include: [{ model: Kyc, as: "kyc" }],
+      include: [{ model: Kyc, as: "kyc" }]
     });
 
     return res.json({
       message: "Signup successful. You are now logged in. Welcome to Syca_Ecommerce!",
       token,
-      user: fullUser,
+      user: fullUser
     });
   } catch (error) {
     console.error("Complete signup error:", error);
@@ -127,16 +113,12 @@ exports.completeSignup = async (req, res) => {
   }
 };
 
-// -------------------------
-// Login
-// -------------------------
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-
     const user = await User.findOne({
       where: { email },
-      include: [{ model: Kyc, as: "kyc" }],
+      include: [{ model: Kyc, as: "kyc" }]
     });
 
     if (!user) return res.status(400).json({ message: "Invalid email or password." });
@@ -145,18 +127,38 @@ exports.login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid email or password." });
 
-    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
-    // Prepare safe response
     const userData = user.toJSON();
     delete userData.password;
+
+    // Ensure KYC object is always returned
+    if (!userData.kyc) {
+      userData.kyc = {
+        id: null,
+        userId: user.id,
+        fullName: "",
+        address: "",
+        dob: null,
+        bvn: null,
+        idNumber: null,
+        idDocumentUrl: null,
+        selfieUrl: null,
+        utilityBillUrl: null,
+        bankStatementUrl: null,
+        bankAccountNumber: null,
+        bankName: null,
+        workEmail: null,
+        status: "pending",
+        createdAt: null,
+        updatedAt: null
+      };
+    }
 
     return res.json({
       message: "Login successful",
       token,
-      user: userData,
+      user: userData
     });
   } catch (error) {
     console.error("Login error:", error);
